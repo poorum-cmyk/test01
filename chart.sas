@@ -14,7 +14,7 @@
  /*     REF:                                                     */
  /*    MISC:                                                     */
  /****************************************************************/
-/* ok.. */
+/* ok..2 */
  /****************************************************************/
  /*    The following data step generates January 1979 daily      */
  /* revenues for a company with branches in four cities:         */
