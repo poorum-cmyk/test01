@@ -1,0 +1,518 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI vs 인간 오목</title>
+  <style>
+    :root {
+      --bg: #f7f0e3;
+      --board: #b28055;
+      --cell: #f3e1c6;
+      --black: #121212;
+      --white: #f8fafc;
+      --text: #2b2b2b;
+      --accent: #6b4f34;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background: linear-gradient(180deg, #f7f0e3 0%, #e7d6b9 100%);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 15px, transparent 15px 30px), repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 20px, transparent 20px 40px);
+    }
+    .app {
+      width: min(980px, 100%);
+      max-width: 980px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 22px;
+      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.14);
+      overflow: hidden;
+      border: 1px solid rgba(107, 79, 52, 0.1);
+    }
+    .header {
+      padding: 24px 24px 20px;
+      background: linear-gradient(135deg, #d4b590, #c1926a);
+      color: #2b2b2b;
+    }
+    .header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.9rem, 5vw, 2.6rem);
+    }
+    .header p {
+      margin: 0;
+      font-size: 0.97rem;
+      opacity: 0.92;
+    }
+    .content {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      padding: 22px 24px 28px;
+    }
+    .board {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #e4c6a3;
+      border-radius: 18px;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: repeat(15, minmax(0, 1fr));
+      grid-template-rows: repeat(15, minmax(0, 1fr));
+      gap: 0;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+      border: 2px solid #000;
+      background-clip: content-box;
+      background-origin: content-box;
+      background-image:
+        linear-gradient(to right, rgba(0, 0, 0, 0.95) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.95) 1px, transparent 1px);
+      background-size: calc(100% / 15) calc(100% / 15), calc(100% / 15) calc(100% / 15);
+      background-position: calc(100% / 30) calc(100% / 30), calc(100% / 30) calc(100% / 30);
+    }
+    .cell {
+      background: transparent;
+      position: relative;
+      border-radius: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .cell:hover {
+      transform: scale(1.01);
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .stone {
+      width: 96%;
+      height: 96%;
+      border-radius: 50%;
+      position: relative;
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08), 0 6px 16px rgba(15, 23, 42, 0.18);
+    }
+    .panel {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .status,
+    .controls,
+    .guide {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 20px;
+      padding: 18px 20px;
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.1);
+    }
+    .stone.black { background: var(--black); }
+    .stone.white { background: var(--white); }
+    .panel {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .status,
+    .controls,
+    .guide {
+      background: #f8fafc;
+      border-radius: 20px;
+      padding: 18px 20px;
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+    }
+    .status strong { display: block; margin-bottom: 8px; font-size: 1.05rem; }
+    .status span { color: #475569; }
+    .controls button {
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      background: var(--accent);
+      color: white;
+      font-size: 1rem;
+      padding: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .controls button:hover { opacity: 0.95; transform: translateY(-1px); }
+    .player-select {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .player-button {
+      border: 1px solid rgba(107, 79, 52, 0.3);
+      background: #f7ede0;
+      color: #5d432e;
+      border-radius: 14px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease;
+      font-weight: 600;
+    }
+    .player-button:hover {
+      background: #e8d2bc;
+      transform: translateY(-1px);
+    }
+    .player-button.selected {
+      background: #6b4f34;
+      color: white;
+      border-color: #6b4f34;
+    }
+    .guide h2 { margin-top: 0; }
+    .guide ul { margin: 0; padding-left: 18px; color: #475569; }
+    .guide ul li { margin-bottom: 10px; }
+    .footer {
+      padding: 16px 24px 26px;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      color: #6b4f34;
+      font-size: 0.95rem;
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      padding: 16px;
+    }
+    .modal-backdrop.active {
+      display: flex;
+    }
+    .modal {
+      width: min(420px, 100%);
+      background: #ffffff;
+      border-radius: 22px;
+      box-shadow: 0 30px 80px rgba(15, 23, 42, 0.18);
+      padding: 28px 24px;
+      text-align: center;
+    }
+    .modal h2 {
+      margin: 0 0 14px;
+      font-size: 1.45rem;
+      color: #2b2b2b;
+    }
+    .modal p {
+      margin: 0 0 22px;
+      color: #475569;
+      line-height: 1.6;
+    }
+    .modal button {
+      border: none;
+      border-radius: 14px;
+      background: #6b4f34;
+      color: white;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    @media (max-width: 900px) {
+      .content { grid-template-columns: 1fr; }
+      .board { min-height: 320px; }
+      .app { margin: 0 0 12px; }
+      .header { padding: 20px 18px 18px; }
+      .content { gap: 16px; padding: 18px 18px 24px; }
+      .status, .controls, .guide { padding: 16px 18px; }
+      .footer { flex-direction: column; align-items: flex-start; padding: 16px 18px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>AI vs 인간 오목</h1>
+      <p>흔한 오목 룰을 기반으로 한 간단한 대국. 클릭하면 흑돌을 놓고 AI가 백돌로 응수합니다.</p>
+    </header>
+    <div class="content">
+      <div class="board" id="board"></div>
+      <div class="panel">
+        <div class="status">
+          <strong>게임 상태</strong>
+          <span id="statusText">흑차례입니다.</span>
+        </div>
+        <div class="controls">
+          <div class="player-select">
+            <button type="button" class="player-button" data-player="김근태">김근태</button>
+            <button type="button" class="player-button" data-player="이지연">이지연</button>
+            <button type="button" class="player-button" data-player="김수빈">김수빈</button>
+          </div>
+          <button id="restartBtn">새 게임 시작</button>
+        </div>
+        <div class="guide">
+          <h2>게임 안내</h2>
+          <ul>
+            <li>15x15 오목 보드에서 5목을 먼저 완성하면 승리합니다.</li>
+            <li>플레이어는 흑돌을 클릭하여 둡니다.</li>
+            <li>AI는 백돌을 자동으로 두며, 기본 공격/방어 AI를 사용합니다.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>오목 기보</span>
+      <span>기본 AI: 공격/방어 우선</span>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="resultBackdrop">
+    <div class="modal">
+      <h2 id="resultTitle">게임 종료</h2>
+      <p id="resultMessage">결과가 나왔습니다.</p>
+      <button id="closeResultBtn">확인</button>
+    </div>
+  </div>
+
+  <script>
+    const BOARD_SIZE = 15;
+    const boardElement = document.getElementById('board');
+    const statusText = document.getElementById('statusText');
+    const restartBtn = document.getElementById('restartBtn');
+    const playerButtons = document.querySelectorAll('.player-button');
+    const resultBackdrop = document.getElementById('resultBackdrop');
+    const closeResultBtn = document.getElementById('closeResultBtn');
+
+    const EMPTY = 0;
+    const BLACK = 1;
+    const WHITE = 2;
+    let board = [];
+    let gameOver = false;
+    let currentPlayer = BLACK;
+    let selectedPlayer = null;
+    let gameStarted = false;
+
+    function initBoard() {
+      board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(EMPTY));
+      boardElement.innerHTML = '';
+      gameOver = false;
+      currentPlayer = BLACK;
+      statusText.textContent = '흑차례입니다.';
+
+      for (let y = 0; y < BOARD_SIZE; y += 1) {
+        for (let x = 0; x < BOARD_SIZE; x += 1) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.x = x;
+          cell.dataset.y = y;
+          cell.addEventListener('click', handleMove);
+          boardElement.appendChild(cell);
+        }
+      }
+    }
+
+    function handleMove(event) {
+      if (gameOver || currentPlayer !== BLACK) return;
+      const x = Number(event.currentTarget.dataset.x);
+      const y = Number(event.currentTarget.dataset.y);
+      if (board[y][x] !== EMPTY) return;
+      placeStone(x, y, BLACK);
+      if (checkWin(x, y, BLACK)) {
+        statusText.textContent = '흑 승리! 게임 종료.';
+        gameOver = true;
+        showGameResult('player');
+        return;
+      }
+      currentPlayer = WHITE;
+      statusText.textContent = 'AI가 두는 중...';
+      setTimeout(() => {
+        aiMove();
+      }, 180);
+    }
+
+    function placeStone(x, y, color) {
+      board[y][x] = color;
+      const index = y * BOARD_SIZE + x;
+      const cell = boardElement.children[index];
+      const stone = document.createElement('div');
+      stone.className = `stone ${color === BLACK ? 'black' : 'white'}`;
+      cell.appendChild(stone);
+    }
+
+    function aiMove() {
+      const [ax, ay] = findBestMove();
+      if (ax === null) {
+        statusText.textContent = '무승부입니다.';
+        gameOver = true;
+        showGameResult('draw');
+        return;
+      }
+      placeStone(ax, ay, WHITE);
+      if (checkWin(ax, ay, WHITE)) {
+        statusText.textContent = 'AI (백) 승리! 게임 종료.';
+        gameOver = true;
+        showGameResult('ai');
+        return;
+      }
+      currentPlayer = BLACK;
+      statusText.textContent = '흑차례입니다.';
+    }
+
+    function findBestMove() {
+      let bestScore = -Infinity;
+      let bestMove = [null, null];
+      for (let y = 0; y < BOARD_SIZE; y += 1) {
+        for (let x = 0; x < BOARD_SIZE; x += 1) {
+          if (board[y][x] !== EMPTY) continue;
+          const score = evaluateCell(x, y, WHITE) + evaluateCell(x, y, BLACK) * 0.95;
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = [x, y];
+          }
+        }
+      }
+      return bestMove;
+    }
+
+    function evaluateCell(x, y, color) {
+      const directions = [
+        [1, 0],
+        [0, 1],
+        [1, 1],
+        [1, -1],
+      ];
+      let total = 0;
+      for (const [dx, dy] of directions) {
+        const count = countLine(x, y, dx, dy, color);
+        total += scoreCount(count);
+      }
+      return total;
+    }
+
+    function countLine(x, y, dx, dy, color) {
+      let count = 1;
+      let openEnds = 0;
+      const line = [
+        countDirection(x, y, dx, dy, color),
+        countDirection(x, y, -dx, -dy, color),
+      ];
+      const open = [
+        isOpenEnd(x, y, dx, dy, color),
+        isOpenEnd(x, y, -dx, -dy, color),
+      ];
+      const len = line[0] + line[1] + 1;
+      openEnds = open[0] + open[1];
+      return { len, openEnds };
+    }
+
+    function countDirection(x, y, dx, dy, color) {
+      let steps = 0;
+      let cx = x + dx;
+      let cy = y + dy;
+      while (inBounds(cx, cy) && board[cy][cx] === color) {
+        steps += 1;
+        cx += dx;
+        cy += dy;
+      }
+      return steps;
+    }
+
+    function isOpenEnd(x, y, dx, dy, color) {
+      const nx = x + dx * (countDirection(x, y, dx, dy, color) + 1);
+      const ny = y + dy * (countDirection(x, y, dx, dy, color) + 1);
+      return inBounds(nx, ny) && board[ny][nx] === EMPTY ? 1 : 0;
+    }
+
+    function scoreCount({ len, openEnds }) {
+      if (len >= 5) return 100000;
+      if (len === 4 && openEnds === 2) return 10000;
+      if (len === 4 && openEnds === 1) return 2000;
+      if (len === 3 && openEnds === 2) return 1200;
+      if (len === 3 && openEnds === 1) return 300;
+      if (len === 2 && openEnds === 2) return 180;
+      if (len === 2 && openEnds === 1) return 50;
+      if (len === 1 && openEnds === 2) return 20;
+      return 5;
+    }
+
+    function checkWin(x, y, color) {
+      const directions = [
+        [1, 0],
+        [0, 1],
+        [1, 1],
+        [1, -1],
+      ];
+      for (const [dx, dy] of directions) {
+        let count = 1;
+        count += countDirection(x, y, dx, dy, color);
+        count += countDirection(x, y, -dx, -dy, color);
+        if (count >= 5) return true;
+      }
+      return false;
+    }
+
+    function inBounds(x, y) {
+      return x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE;
+    }
+
+    function showResult(title, message) {
+      const titleElement = document.getElementById('resultTitle');
+      const messageElement = document.getElementById('resultMessage');
+      titleElement.textContent = title;
+      messageElement.textContent = message;
+      resultBackdrop.classList.add('active');
+    }
+
+    function showGameResult(winner) {
+      if (winner === 'draw') {
+        showResult('무승부', '더 이상 둘 곳이 없습니다. 무승부입니다.');
+        return;
+      }
+      const isPlayerWinner = winner === 'player';
+      const title = isPlayerWinner ? `${selectedPlayer}님 승리!` : 'AI 승리';
+      const message = isPlayerWinner
+        ? `${selectedPlayer}님이 5목을 완성했습니다. 축하합니다!`
+        : `${selectedPlayer}님이 졌습니다. 다음에 다시 도전해보세요.`;
+      showResult(title, message);
+    }
+
+    playerButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        selectPlayer(button.dataset.player);
+      });
+    });
+
+    closeResultBtn.addEventListener('click', () => {
+      resultBackdrop.classList.remove('active');
+    });
+    resultBackdrop.addEventListener('click', (event) => {
+      if (event.target === resultBackdrop) {
+        resultBackdrop.classList.remove('active');
+      }
+    });
+
+    restartBtn.addEventListener('click', () => {
+      if (!selectedPlayer) {
+        statusText.textContent = '플레이어를 선택한 후 게임을 시작하세요.';
+        return;
+      }
+      startGame();
+    });
+
+    initBoard();
+
+    function selectPlayer(name) {
+      selectedPlayer = name;
+      playerButtons.forEach((button) => {
+        button.classList.toggle('selected', button.dataset.player === name);
+      });
+      statusText.textContent = `${name}님을 선택했습니다. 새 게임 시작을 눌러주세요.`;
+    }
+
+    function startGame() {
+      initBoard();
+      gameOver = false;
+      currentPlayer = BLACK;
+      gameStarted = true;
+      statusText.textContent = `${selectedPlayer}님 차례입니다. 흑돌을 놓으세요.`;
+    }
+  </script>
+</body>
+</html>
